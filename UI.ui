@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>462</width>
-    <height>482</height>
+    <width>468</width>
+    <height>665</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -91,7 +91,7 @@
          </size>
         </property>
         <property name="styleSheet">
-         <string notr="true">border: 0.5px solid #05e69f</string>
+         <string notr="true">border: 5px solid #05e69f</string>
         </property>
         <property name="lineWidth">
          <number>5</number>
@@ -141,7 +141,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="comboBox_3">
+         <widget class="QComboBox" name="comboBox_mode">
           <item>
            <property name="text">
             <string>Full search</string>
@@ -179,7 +179,7 @@
          </spacer>
         </item>
         <item>
-         <widget class="QSpinBox" name="spinBox">
+         <widget class="QSpinBox" name="spinBox_zoneLeft">
           <property name="enabled">
            <bool>false</bool>
           </property>
@@ -208,7 +208,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="spinBox_2">
+         <widget class="QSpinBox" name="spinBox_zoneRight">
           <property name="enabled">
            <bool>false</bool>
           </property>
@@ -234,37 +234,12 @@
       <item>
        <widget class="Line" name="line_2">
         <property name="styleSheet">
-         <string notr="true">border: 2px solid #02a89b</string>
+         <string notr="true">border: 2px solid #03afb8</string>
         </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
-        <item>
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>Autocorrelation Method</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox">
-          <item>
-           <property name="text">
-            <string>Numpy</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Miso</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_8">
@@ -292,9 +267,12 @@
          </spacer>
         </item>
         <item>
-         <widget class="QSlider" name="horizontalSlider">
+         <widget class="QSlider" name="threshSlider">
           <property name="enabled">
            <bool>true</bool>
+          </property>
+          <property name="maximum">
+           <number>255</number>
           </property>
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -311,6 +289,166 @@
        </layout>
       </item>
       <item>
+       <widget class="Line" name="line_4">
+        <property name="styleSheet">
+         <string notr="true">border: 2px solid #028f92</string>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_12">
+        <item>
+         <widget class="QLabel" name="label_13">
+          <property name="text">
+           <string>Split into grids</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_gridsplit">
+          <item>
+           <property name="text">
+            <string>None</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Auto</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Manual</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_11">
+        <item>
+         <widget class="QLabel" name="label_11">
+          <property name="text">
+           <string>Split details</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="spinBox_gridLeft">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="minimum">
+           <number>0</number>
+          </property>
+          <property name="maximum">
+           <number>1000000</number>
+          </property>
+          <property name="value">
+           <number>0</number>
+          </property>
+         </widget>
+        </item>
+        <item alignment="Qt::AlignHCenter">
+         <widget class="QLabel" name="label_12">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="spinBox_gridRight">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="minimum">
+           <number>0</number>
+          </property>
+          <property name="maximum">
+           <number>100000</number>
+          </property>
+          <property name="value">
+           <number>0</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="Line" name="line_17">
+        <property name="styleSheet">
+         <string notr="true">border: 2px solid #027371</string>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>Autocorrelation Method</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_AutocorMethod">
+          <item>
+           <property name="text">
+            <string>Numpy</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Miso</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="Line" name="line_18">
+        <property name="styleSheet">
+         <string notr="true">border: 2px solid #024451</string>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
        <layout class="QHBoxLayout" name="horizontalLayout_10">
         <item>
          <widget class="QLabel" name="label_10">
@@ -320,7 +458,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="comboBox_5">
+         <widget class="QComboBox" name="comboBox_visOutput">
           <item>
            <property name="text">
             <string>None</string>
@@ -341,16 +479,44 @@
        </layout>
       </item>
       <item>
+       <widget class="Line" name="line_19">
+        <property name="styleSheet">
+         <string notr="true">border: 2px solid #020024</string>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_13">
+        <item>
+         <widget class="QLabel" name="label_14">
+          <property name="text">
+           <string>Pixel size</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="spinBox">
+          <property name="maximum">
+           <number>9999999</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
        <layout class="QHBoxLayout" name="horizontalLayout_9">
         <item>
-         <widget class="QCheckBox" name="checkBox">
+         <widget class="QCheckBox" name="checkBox_outImg">
           <property name="text">
            <string>Output images</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="checkBox_2">
+         <widget class="QCheckBox" name="checkBox_Outcsv">
           <property name="text">
            <string>Output Final result as CSV</string>
           </property>
@@ -383,7 +549,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>462</width>
+     <width>468</width>
      <height>22</height>
     </rect>
    </property>
