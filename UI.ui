@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>468</width>
-    <height>665</height>
+    <height>698</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -498,7 +498,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="spinBox">
+         <widget class="QSpinBox" name="spinBox_pixel">
           <property name="maximum">
            <number>9999999</number>
           </property>
@@ -523,6 +523,13 @@
          </widget>
         </item>
        </layout>
+      </item>
+      <item>
+       <widget class="QPushButton" name="analyze">
+        <property name="text">
+         <string>Analyze</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
