@@ -1,7 +1,8 @@
+
 import napari
 from skimage.io import imread
 from qtpy.QtWidgets import QMainWindow, QFileDialog
-from qtpy.QtCore import QThread
+import qtpy.QtCore
 from qtpy import uic
 from pathlib import Path
 import os
@@ -63,6 +64,7 @@ def PrincipleComponents(df, mode, highlight):
 
     fig.show()
 
+
 def gridsplit(array, mode, val):
     def internalsplit(array, val):
         if val[0] == 0:
@@ -93,6 +95,7 @@ def gridsplit(array, mode, val):
     if mode == "None":
         return array
 
+
 def autocorr(x, method):
     def misoformula(list, index):
 
@@ -120,6 +123,7 @@ def autocorr(x, method):
         resultmin = np.flip(resultplus[1:])
         result = np.concatenate((resultmin, resultplus), axis=None)
         return result
+
 
 def midline(matrix, angle):
     midpoint = ((np.array(np.shape(matrix)) - 1) / 2).astype(int)
@@ -223,8 +227,6 @@ def nextpointsmart(matrixshape, deg, start, end, direction):
                 appendo.append(proposedpoint)
 
     return appendo[0], appendo[1]
-
-
 
 
 def nanarraycleaner(list):
@@ -364,9 +366,10 @@ def cycledegrees(input, pxpermicron, filename, mode, outputimg, outputcsv, outpu
 
     return np.nanmax(fitlist[:, 1]), np.count_nonzero(np.isnan(grid)), repeatatmaxdeg, dfPC
 
+
 # Define the main window class
 class AutocorrelationTool(QMainWindow):
-    def __init__(self, napari_viewer):          # include napari_viewer as argument (it has to have this name)
+    def __init__(self, napari_viewer):  # include napari_viewer as argument (it has to have this name)
         super().__init__()
         self.viewer = napari_viewer
         self.UI_FILE = str(Path(__file__).parent / "UI.ui")  # path to .ui file
@@ -389,11 +392,10 @@ class AutocorrelationTool(QMainWindow):
         self.comboBox_visOutput.currentIndexChanged.connect(self.changeLock_vis)
         self.analyze.clicked.connect(self.Autocorrelate)
         self.pushButton_File.clicked.connect(self.filedialog)
-
+        self.thread.progress.connect(self.updateprogress)
 
     def filedialog(self):
         self.outputPath = QFileDialog.getExistingDirectory(self, 'Select output path')
-
 
     def changeLock_zone(self):
         if self.comboBox_mode.currentText() == "Full search":
@@ -470,105 +472,74 @@ class AutocorrelationTool(QMainWindow):
 
         self.inputarray = np.array(inputarray, dtype='float32')
 
-
-
     def visualizeThresh(self):
         self.readfile()
         mask = self.threshold()
         self.viewer.add_image(mask,
-                              name = str(self.viewer.layers[self.comboBox_layer.currentText()]) + "_mask",
-                              colormap = "cyan",
-                              opacity = 0.30)
+                              name=str(self.viewer.layers[self.comboBox_layer.currentText()]) + "_mask",
+                              colormap="cyan",
+                              opacity=0.30)
+
+    def updateprogress(self, progress):
+        if progress[0]:
+            self.progressBar.setValue(100)
+        else:
+            self.progressBar.setValue(self.progressBar.value() + (1/int(progress[1]))*100)
 
 
     def Autocorrelate(self):
         self.readfile()
         self.threshold()
 
-        self.thread.updateparameters(maskedarray= self.maskedarray,
-                                    mode= self.comboBox_mode.currentText(),
-                                    resleft= self.spinBox_zoneLeft.value(),
-                                    resright= self.spinBox_zoneLeft.value(),
-                                    gridsplitmode= self.comboBox_gridsplit.currentText(),
-                                    gridsplitleft= self.spinBox_gridLeft.value(),
-                                    gridsplitright= self.spinBox_gridRight.value(),
-                                    autocormode= self.comboBox_AutocorMethod.currentText(),
-                                    visoutput= self.comboBox_visOutput.currentText(),
-                                    visleft,
-                                    visright,
-                                    pixelsize,
-                                    outimg,
-                                    outcsv,
-                                    path)
-
-        print(np.shape(self.maskedarray))
-
-        gridsplitmode = self.comboBox_gridsplit.currentText()
-        # gridsplitmode = "Auto"
-
-        gridsplitval = [self.spinBox_gridLeft.value(), self.spinBox_gridRight.value()]
-        # gridsplitval = [200,200]
-
-
-        cleangrids = []
-
-        grids = gridsplit(self.maskedarray, gridsplitmode, gridsplitval)
-        print(np.shape(grids))
-        for index, grid in enumerate(grids):
-            if not np.isnan(grid).all():
-                cleangrids.append(grid)
-
-        indexgrids = []
-
-        for index, grid in enumerate(cleangrids):
-            indexgrids.append([index, grid])
+        self.thread.updateparameters(currentlayer=self.comboBox_layer.currentText(),
+                                     maskedarray=self.maskedarray,
+                                     mode=self.comboBox_mode.currentText(),
+                                     resleft=self.spinBox_zoneLeft.value(),
+                                     resright=self.spinBox_zoneLeft.value(),
+                                     gridsplitmode=self.comboBox_gridsplit.currentText(),
+                                     gridsplitleft=self.spinBox_gridLeft.value(),
+                                     gridsplitright=self.spinBox_gridRight.value(),
+                                     autocormode=self.comboBox_AutocorMethod.currentText(),
+                                     visoutput=self.comboBox_visOutput.currentText(),
+                                     visleft=self.doubleSpinBox_visLeft.value(),
+                                     visright=self.doubleSpinBox_visRight.value(),
+                                     pixelsize=self.spinBox_pixel.value(),
+                                     outimg=self.checkBox_outImg.isChecked(),
+                                     outcsv=self.checkBox_outCSV.isChecked(),
+                                     path=self.outputPath)
 
         self.progressBar.setValue(0)
-        self.progressBar.setMaximum(len(indexgrids))
+        self.thread.start()
 
-        if __name__ == '__main__':
-            with Pool(4) as pool:
-                output = []
-                for _ in tqdm(pool.imap_unordered(partial(cycledegrees,
-                                          pxpermicron= self.spinBox_pixel.value(),
-                                          filename= self.comboBox_layer.currentText(),
-                                          mode= self.comboBox_AutocorMethod.currentText(),
-                                          outputimg= self.checkBox_outImg.isChecked(),
-                                          outputcsv= self.checkBox_outCSV.isChecked(),
-                                          outputpath= self.outputPath), indexgrids), total=len(indexgrids)):
-                    output.append(_)
-                    print(self.progressBar.value())
-                    self.progressBar.setValue(self.progressBar.value() + 1)
-                # output = pool.map(partial(cycledegrees,
-                #                           pxpermicron= self.spinBox_pixel.value(),
-                #                           filename= self.comboBox_layer.currentText(),
-                #                           mode= self.comboBox_AutocorMethod.currentText(),
-                #                           outputimg= self.checkBox_outImg.isChecked(),
-                #                           outputcsv= self.checkBox_outCSV.isChecked(),
-                #                           outputpath= self.outputPath), indexgrids)
 
-                output = np.array(output)
-                weighted_avg = np.average(output[:, 0], weights=output[:, 1])
-                intervallist = output[:, 2]
-                medianrepeat = np.average(output[:, 2], weights=output[:, 1])
-                print('FINAL RESULT', weighted_avg)
-                print(intervallist)
-                print('most likely periodicity interval', medianrepeat)
-
-                if not self.comboBox_visOutput.currentText() == "None":
-                    df = pd.concat(output[:, 3])
-                    PrincipleComponents(df, self.comboBox_visOutput.currentText(), (self.doubleSpinBox_visLeft.value(), self.doubleSpinBox_visRight.value()))
-
-class ThreadClass(QThread):
-    def __init__(self,):
+class ThreadClass(qtpy.QtCore.QThread):
+    progress = qtpy.QtCore.Signal(object)
+    def __init__(self, ):
         super().__init__()
+        self.currentlayer = None
+        self.path = None
+        self.outcsv = None
+        self.outimg = None
+        self.pixelsize = None
+        self.visright = None
+        self.visleft = None
+        self.visoutput = None
+        self.autocormode = None
+        self.gridsplitright = None
+        self.gridsplitleft = None
+        self.gridsplitmode = None
+        self.resright = None
+        self.resleft = None
+        self.analysismode = None
+        self.maskedarray = None
+
 
     def updateparameters(self,
+                         currentlayer,
                          maskedarray,
                          mode,
                          resleft,
                          resright,
-                         thresh,
                          gridsplitmode,
                          gridsplitleft,
                          gridsplitright,
@@ -581,19 +552,86 @@ class ThreadClass(QThread):
                          outcsv,
                          path):
 
+        self.currentlayer = currentlayer
+        self.maskedarray = maskedarray
+        self.analysismode = mode
+        self.resleft = resleft
+        self.resright = resright
+        self.gridsplitmode = gridsplitmode
+        self.gridsplitleft = gridsplitleft
+        self.gridsplitright = gridsplitright
+        self.autocormode = autocormode
+        self.visoutput = visoutput
+        self.visleft = visleft
+        self.visright = visright
+        self.pixelsize = pixelsize
+        self.outimg = outimg
+        self.outcsv = outcsv
+        self.path = path
+
     def run(self):
+        gridsplitmode = self.gridsplitmode
+        # gridsplitmode = "Auto"
+
+        gridsplitval = [self.gridsplitleft, self.gridsplitright]
+        # gridsplitval = [200,200]
+
+        cleangrids = []
+
+        grids = gridsplit(self.maskedarray, gridsplitmode, gridsplitval)
+        for index, grid in enumerate(grids):
+            if not np.isnan(grid).all():
+                cleangrids.append(grid)
+
+        indexgrids = []
+
+        for index, grid in enumerate(cleangrids):
+            indexgrids.append([index, grid])
+
+        if __name__ == '__main__':
+            with Pool(4) as pool:
+                output = []
+                for _ in tqdm(pool.imap_unordered(partial(cycledegrees,
+                                                          pxpermicron=self.pixelsize,
+                                                          filename=self.currentlayer,
+                                                          mode=self.autocormode,
+                                                          outputimg=self.outimg,
+                                                          outputcsv=self.outcsv,
+                                                          outputpath=self.path), indexgrids),
+                              total=len(indexgrids)):
 
 
 
+                    output.append(_)
+                    self.progress.emit([False, len(indexgrids)])
+                    # print(self.progressBar.value())
+                    # self.progressBar.setValue(self.progressBar.value() + 1)
+
+                self.progress.emit([True, len(indexgrids)])
+                output = np.array(output)
+                weighted_avg = np.average(output[:, 0], weights=output[:, 1])
+                intervallist = output[:, 2]
+                medianrepeat = np.average(output[:, 2], weights=output[:, 1])
+                print('FINAL RESULT', weighted_avg)
+                print(intervallist)
+                print('most likely periodicity interval', medianrepeat)
+
+                if not self.visoutput == "None":
+                    df = pd.concat(output[:, 3])
+                    PrincipleComponents(df, self.visoutput,
+                                        (self.visleft, self.visright))
+
+    def stop(self):
+        self.terminate()
 
 
 if __name__ == '__main__':
     viewer = napari.Viewer()
-    napari_image = imread('IMG0194_Kv1 BIC 48h.obf - STAR RED.tif')      # Reads an image from file
-    viewer.add_image(napari_image, name='napari_island')                # Adds the image to the viewer and give the image layer a name
+    napari_image = imread('IMG0194_Kv1 BIC 48h.obf - STAR RED.tif')  # Reads an image from file
+    viewer.add_image(napari_image, name='napari_island')  # Adds the image to the viewer and give the image layer a name
 
-    Autocorrelation_widget = AutocorrelationTool(viewer)                                     # Create instance from our class
-    viewer.window.add_dock_widget(Autocorrelation_widget, area='right')           # Add our gui instance to napari viewer
+    Autocorrelation_widget = AutocorrelationTool(viewer)  # Create instance from our class
+    viewer.window.add_dock_widget(Autocorrelation_widget, area='right')  # Add our gui instance to napari viewer
 
 
     @viewer.layers.events.removed.connect
@@ -601,5 +639,6 @@ if __name__ == '__main__':
     @viewer.layers.events.changed.connect
     def updatelayer(event):
         Autocorrelation_widget.updatelayer()
+
 
     napari.run()
