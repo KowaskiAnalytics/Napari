@@ -1,6 +1,7 @@
 import napari
 from skimage.io import imread
-from qtpy.QtWidgets import QMainWindow
+from qtpy.QtWidgets import QMainWindow, QFileDialog
+from qtpy.QtCore import QThread
 from qtpy import uic
 from pathlib import Path
 import os
@@ -24,7 +25,7 @@ def PrincipleComponents(df, mode, highlight):
     x = df.loc[:, features].values
     x = StandardScaler().fit_transform(x)
 
-    if mode == "2d":
+    if mode == "2D PCA":
         pca = PCA(n_components=2)
 
         principalComponents = pca.fit_transform(x)
@@ -45,7 +46,7 @@ def PrincipleComponents(df, mode, highlight):
                        marker_symbol='star', marker_size=15, hoverinfo="none")
         )
 
-    elif mode == "3d":
+    elif mode == "3D":
 
         df["periodicity"] = df["periodicity"].astype(float)
         df["repeat"] = df["repeat"].astype(float)
@@ -246,13 +247,13 @@ def nanarraycleaner(list):
     return output
 
 
-def cycledegrees(input, pxpermicron, filename, mode):
+def cycledegrees(input, pxpermicron, filename, mode, outputimg, outputcsv, outputpath):
     grid = input[1]
     index = input[0]
     fitlist = []
     tempdict = {}
     dfPC = pd.DataFrame(columns=["deg", "periodicity", "repeat", "gridindex"])
-    for deg in tqdm(range(-90, 90)):
+    for deg in range(-90, 90):
 
         tempdict[deg] = {}
 
@@ -333,32 +334,33 @@ def cycledegrees(input, pxpermicron, filename, mode):
         maxdeg = 0
         repeatatmaxdeg = 0
 
-    fig, axes = plt.subplots(nrows=3)
-    axes[0].imshow(grid)
-    axes[0].plot([tempdict[maxdeg]["x0"], tempdict[maxdeg]["x1"]], [tempdict[maxdeg]["y0"], tempdict[maxdeg]["y1"]],
-                 'ro-')
-    axes[0].axis('image')
+    if outputimg:
+        fig, axes = plt.subplots(nrows=3)
+        axes[0].imshow(grid)
+        axes[0].plot([tempdict[maxdeg]["x0"], tempdict[maxdeg]["x1"]], [tempdict[maxdeg]["y0"], tempdict[maxdeg]["y1"]],
+                     'ro-')
+        axes[0].axis('image')
 
-    cormin = tempdict[maxdeg]["cormin"]
-    cormax = tempdict[maxdeg]["cormax"]
-    autocorlist = tempdict[maxdeg]["autocorrelationplot"]
-    micronlist = np.array(range(len(autocorlist))) / pxpermicron
+        cormin = tempdict[maxdeg]["cormin"]
+        cormax = tempdict[maxdeg]["cormax"]
+        autocorlist = tempdict[maxdeg]["autocorrelationplot"]
+        micronlist = np.array(range(len(autocorlist))) / pxpermicron
 
-    axes[1].plot(tempdict[maxdeg]["intensityplot"])
-    axes[2].plot(micronlist, autocorlist)
-    axes[2].plot(cormin / pxpermicron, autocorlist[cormin], "o", label="min", color='r')
-    axes[2].plot(cormax / pxpermicron, autocorlist[cormax], "o", label="max", color='b')
-    axes[2].text(0.05, 0.95, np.nanmax(fitlist[:, 1]), transform=axes[2].transAxes, fontsize=14,
-                 verticalalignment='top')
-    axes[2].text(0.05, 0.7, repeatatmaxdeg, transform=axes[2].transAxes, fontsize=14,
-                 verticalalignment='top')
+        axes[1].plot(tempdict[maxdeg]["intensityplot"])
+        axes[2].plot(micronlist, autocorlist)
+        axes[2].plot(cormin / pxpermicron, autocorlist[cormin], "o", label="min", color='r')
+        axes[2].plot(cormax / pxpermicron, autocorlist[cormax], "o", label="max", color='b')
+        axes[2].text(0.05, 0.95, np.nanmax(fitlist[:, 1]), transform=axes[2].transAxes, fontsize=14,
+                     verticalalignment='top')
+        axes[2].text(0.05, 0.7, repeatatmaxdeg, transform=axes[2].transAxes, fontsize=14,
+                     verticalalignment='top')
 
-    try:
-        os.mkdir("output/" + filename)
-    except FileExistsError:
-        pass
+        try:
+            os.mkdir(outputpath + "/" + filename)
+        except FileExistsError:
+            pass
 
-    plt.savefig("output/" + filename + "/" + str(index) + ".jpg")
+        plt.savefig(outputpath + "/" + filename + "/" + str(index) + ".jpg")
 
     return np.nanmax(fitlist[:, 1]), np.count_nonzero(np.isnan(grid)), repeatatmaxdeg, dfPC
 
@@ -370,8 +372,11 @@ class AutocorrelationTool(QMainWindow):
         self.UI_FILE = str(Path(__file__).parent / "UI.ui")  # path to .ui file
         uic.loadUi(self.UI_FILE, self)
 
+        self.thread = ThreadClass()
+
         self.inputarray = None
         self.maskedarray = None
+        self.outputPath = None
 
         self.comboBox_layer.clear()
         for i in self.viewer.layers:
@@ -381,8 +386,13 @@ class AutocorrelationTool(QMainWindow):
 
         self.comboBox_mode.currentIndexChanged.connect(self.changeLock_zone)
         self.comboBox_gridsplit.currentIndexChanged.connect(self.changeLock_grid)
-        self.analyze.clicked.connect(self.Autocorrelate())
+        self.comboBox_visOutput.currentIndexChanged.connect(self.changeLock_vis)
+        self.analyze.clicked.connect(self.Autocorrelate)
+        self.pushButton_File.clicked.connect(self.filedialog)
 
+
+    def filedialog(self):
+        self.outputPath = QFileDialog.getExistingDirectory(self, 'Select output path')
 
 
     def changeLock_zone(self):
@@ -402,6 +412,15 @@ class AutocorrelationTool(QMainWindow):
         else:
             self.spinBox_gridLeft.setEnabled(True)
             self.spinBox_gridRight.setEnabled(True)
+
+    def changeLock_vis(self):
+        if self.comboBox_visOutput.currentText() == "None":
+            self.doubleSpinBox_visLeft.setEnabled(False)
+            self.doubleSpinBox_visRight.setEnabled(False)
+
+        else:
+            self.doubleSpinBox_visLeft.setEnabled(True)
+            self.doubleSpinBox_visRight.setEnabled(True)
 
     def updatelayer(self):
         self.comboBox_layer.clear()
@@ -466,13 +485,29 @@ class AutocorrelationTool(QMainWindow):
         self.readfile()
         self.threshold()
 
+        self.thread.updateparameters(maskedarray= self.maskedarray,
+                                    mode= self.comboBox_mode.currentText(),
+                                    resleft= self.spinBox_zoneLeft.value(),
+                                    resright= self.spinBox_zoneLeft.value(),
+                                    gridsplitmode= self.comboBox_gridsplit.currentText(),
+                                    gridsplitleft= self.spinBox_gridLeft.value(),
+                                    gridsplitright= self.spinBox_gridRight.value(),
+                                    autocormode= self.comboBox_AutocorMethod.currentText(),
+                                    visoutput= self.comboBox_visOutput.currentText(),
+                                    visleft,
+                                    visright,
+                                    pixelsize,
+                                    outimg,
+                                    outcsv,
+                                    path)
+
         print(np.shape(self.maskedarray))
 
-        # gridsplitmode = self.comboBox_gridsplit.currentText()
-        gridsplitmode = "Auto"
+        gridsplitmode = self.comboBox_gridsplit.currentText()
+        # gridsplitmode = "Auto"
 
-        # gridsplitval = [self.spinBox_gridLeft.value(), self.spinBox_gridRight.value()]
-        gridsplitval = [200,200]
+        gridsplitval = [self.spinBox_gridLeft.value(), self.spinBox_gridRight.value()]
+        # gridsplitval = [200,200]
 
 
         cleangrids = []
@@ -487,18 +522,30 @@ class AutocorrelationTool(QMainWindow):
 
         for index, grid in enumerate(cleangrids):
             indexgrids.append([index, grid])
-        print(np.shape(indexgrids))
+
+        self.progressBar.setValue(0)
+        self.progressBar.setMaximum(len(indexgrids))
+
         if __name__ == '__main__':
             with Pool(4) as pool:
+                output = []
+                for _ in tqdm(pool.imap_unordered(partial(cycledegrees,
+                                          pxpermicron= self.spinBox_pixel.value(),
+                                          filename= self.comboBox_layer.currentText(),
+                                          mode= self.comboBox_AutocorMethod.currentText(),
+                                          outputimg= self.checkBox_outImg.isChecked(),
+                                          outputcsv= self.checkBox_outCSV.isChecked(),
+                                          outputpath= self.outputPath), indexgrids), total=len(indexgrids)):
+                    output.append(_)
+                    print(self.progressBar.value())
+                    self.progressBar.setValue(self.progressBar.value() + 1)
                 # output = pool.map(partial(cycledegrees,
                 #                           pxpermicron= self.spinBox_pixel.value(),
-                #                           filename=self.comboBox_layer.currentText(),
-                #                           mode= self.comboBox_AutocorMethod.currentText()), indexgrids)
-
-                output = pool.map(partial(cycledegrees,
-                                        pxpermicron= 50,
-                                        filename="test",
-                                        mode= "Miso"), indexgrids)
+                #                           filename= self.comboBox_layer.currentText(),
+                #                           mode= self.comboBox_AutocorMethod.currentText(),
+                #                           outputimg= self.checkBox_outImg.isChecked(),
+                #                           outputcsv= self.checkBox_outCSV.isChecked(),
+                #                           outputpath= self.outputPath), indexgrids)
 
                 output = np.array(output)
                 weighted_avg = np.average(output[:, 0], weights=output[:, 1])
@@ -508,8 +555,34 @@ class AutocorrelationTool(QMainWindow):
                 print(intervallist)
                 print('most likely periodicity interval', medianrepeat)
 
-                df = pd.concat(output[:, 3])
-                PrincipleComponents(df, "3d", (0.17, 0.21))
+                if not self.comboBox_visOutput.currentText() == "None":
+                    df = pd.concat(output[:, 3])
+                    PrincipleComponents(df, self.comboBox_visOutput.currentText(), (self.doubleSpinBox_visLeft.value(), self.doubleSpinBox_visRight.value()))
+
+class ThreadClass(QThread):
+    def __init__(self,):
+        super().__init__()
+
+    def updateparameters(self,
+                         maskedarray,
+                         mode,
+                         resleft,
+                         resright,
+                         thresh,
+                         gridsplitmode,
+                         gridsplitleft,
+                         gridsplitright,
+                         autocormode,
+                         visoutput,
+                         visleft,
+                         visright,
+                         pixelsize,
+                         outimg,
+                         outcsv,
+                         path):
+
+    def run(self):
+
 
 
 
